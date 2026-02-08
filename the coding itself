@@ -1,1 +1,7 @@
 #starting
+<<<<<<< Updated upstream
+=======
+print('this is a start')
+print('we are testing')
+>>>>>>> Stashed changes
+'now another change'
