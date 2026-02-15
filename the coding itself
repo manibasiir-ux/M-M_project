@@ -113,3 +113,64 @@ print(df)
 print("\nSaved to first_source_lead.csv")
 
 >>>>>>> Stashed changes
+
+
+import pandas as pd
+from playwright.async_api import async_playwright
+import asyncio
+
+# Load the CSV file with profile URLs
+input_csv = "C:/Users/admin/Downloads/Netherland's_Engineer_Leads.csv"
+output_csv = "Scraped_Contacts.csv"
+
+# Read the list of profile URLs
+df_profiles = pd.read_csv(input_csv)
+profile_urls = df_profiles['profileUrl'].dropna().tolist()
+
+async def scrape_contacts(profile_urls):
+    data = []
+
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(headless=True)
+        context = await browser.new_context()
+        page = await context.new_page()
+
+        for url in profile_urls:
+            print(f"Visiting: {url}")
+            try:
+                await page.goto(url)
+                await page.wait_for_load_state('networkidle', timeout=10000)
+
+                # Initialize variables
+                email = None
+                name = None
+
+                # Extract email if visible on profile
+                email_element = await page.query_selector("a[href^='mailto:']")
+                if email_element:
+                    email = await email_element.get_attribute("href")
+                    email = email.replace("mailto:", "")
+
+                # Extract name if available
+                # Adjust the selector based on LinkedIn profile structure
+                name_element = await page.query_selector("li.inline.t-24.t-black.t-normal.break-words")
+                if name_element:
+                    name = await name_element.inner_text()
+
+                data.append({
+                    "Profile URL": url,
+                    "Name": name,
+                    "Email": email
+                })
+
+            except Exception as e:
+                print(f"Failed to process {url}: {e}")
+                data.append({
+                    "Profile URL": url,
+                    "Name": None,
+                    "Email": None
+                })
+
+        await browser.close()
+
+    return pd.DataFrame(data)
