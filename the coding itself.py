@@ -11,7 +11,7 @@ print('we are testing')
 'another another one'
 =======
 # we-ll-find-a-good-name-for-it-later.
-we wi'll find a good description for it later
+
 
 """
 Created on Wed Feb 11 14:10:34 2026
@@ -114,64 +114,37 @@ print("\nSaved to first_source_lead.csv")
 
 >>>>>>> Stashed changes
 
-# sunday's updates: 
+#New updates.
 
-import pandas as pd
-from playwright.async_api import async_playwright
-import asyncio
+const { chromium } = require('playwright');
+const fs = require('fs');
 
-# Load the CSV file with profile URLs
-input_csv = "C:/Users/admin/Downloads/Netherland's_Engineer_Leads.csv"
-output_csv = "Scraped_Contacts.csv"
+(async () => {
+  const browser = await chromium.launch({ headless: false });
+  const page = await browser.newPage();
 
-# Read the list of profile URLs
-df_profiles = pd.read_csv(input_csv)
-profile_urls = df_profiles['profileUrl'].dropna().tolist()
+  // Navigate to WhatsApp Web and wait for the page to load
+  await page.goto('https://web.whatsapp.com');
 
-async def scrape_contacts(profile_urls):
-    data = []
+  // Wait for the group profile list to be visible
+  await page.waitForSelector('YOUR_SELECTOR_FOR_PROFILE_ITEMS');
 
-    async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=True)
-        context = await browser.new_context()
-        page = await context.new_page()
+  // Extract profile items
+  const profiles = await page.$$eval('YOUR_SELECTOR_FOR_PROFILE_ITEMS', items => {
+    return items.map(item => {
+      // Replace with the correct selectors for name and phone number if available
+      const name = item.querySelector('YOUR_NAME_SELECTOR')?.innerText || '';
+      const phone = item.querySelector('YOUR_PHONE_SELECTOR')?.innerText || '';
+      return { name, phone };
+    });
+  });
 
-        for url in profile_urls:
-            print(f"Visiting: {url}")
-            try:
-                await page.goto(url)
-                await page.wait_for_load_state('networkidle', timeout=10000)
+  // Save to CSV
+  const csvLines = ['Name,Phone'];
+  profiles.forEach(p => {
+    csvLines.push("${p.name}","${p.phone}");
+  });
+  fs.writeFileSync('profiles.csv', csvLines.join('\n'));
 
-                # Initialize variables
-                email = None
-                name = None
-
-                # Extract email if visible on profile
-                email_element = await page.query_selector("a[href^='mailto:']")
-                if email_element:
-                    email = await email_element.get_attribute("href")
-                    email = email.replace("mailto:", "")
-
-                # Extract name if available
-                # Adjust the selector based on LinkedIn profile structure
-                name_element = await page.query_selector("li.inline.t-24.t-black.t-normal.break-words")
-                if name_element:
-                    name = await name_element.inner_text()
-
-                data.append({
-                    "Profile URL": url,
-                    "Name": name,
-                    "Email": email
-                })
-
-            except Exception as e:
-                print(f"Failed to process {url}: {e}")
-                data.append({
-                    "Profile URL": url,
-                    "Name": None,
-                    "Email": None
-                })
-
-        await browser.close()
-
-    return pd.DataFrame(data)
+  await browser.close();
+})();
